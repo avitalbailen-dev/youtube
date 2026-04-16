@@ -17,9 +17,11 @@ jobs:
           cat videos.json | jq -c '.items[] | {
            identifier: .snippet.resourceId.videoId,
            title: .snippet.title
-          }' | while read video; do
+          }' | while read -r video; do
+      
             curl -X POST "https://api.getport.io/v1/blueprints/video/entities?upsert=true" \
               -H "Authorization: Bearer ${{ secrets.PORT_API_KEY }}" \
               -H "Content-Type: application/json" \
-              -d "$videos"
+              -d "$video"
+      
           done
