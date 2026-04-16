@@ -14,7 +14,7 @@ jobs:
           curl -G "https://www.googleapis.com/youtube/v3/playlistItems" \
             --data-urlencode "part=snippet,contentDetails" \
             --data-urlencode "maxResults=50" \
-            --data-urlencode "playlistId=YOUR_PLAYLIST_ID" \
+            --data-urlencode "playlistId=PL5ErBr2d3QJH0kbwTQ7HSuzvBb4zIWzhy" \
             --data-urlencode "key=${{ secrets.YOUTUBE_API_KEY }}" > youtube_response.json
 
           # 2. Check if the API returned an error (e.g., invalid key or private playlist)
