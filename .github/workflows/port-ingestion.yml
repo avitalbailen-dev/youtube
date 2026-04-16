@@ -13,7 +13,7 @@ jobs:
           curl -G "https://www.googleapis.com/youtube/v3/playlistItems" \
             --data-urlencode "part=snippet,contentDetails" \
             --data-urlencode "maxResults=50" \
-            --data-urlencode "playlistId=PASTE_YOUR_PLAYLIST_ID_HERE" \
+            --data-urlencode "playlistId=PL5ErBr2d3QJH0kbwTQ7HSuzvBb4zIWzhy" \
             --data-urlencode "key=${{ secrets.YOUTUBE_API_KEY }}" > raw_response.json
 
           # 2. Transform to Port Format and save to a variable
