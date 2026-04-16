@@ -11,12 +11,11 @@ jobs:
       - name: Fetch videos from YouTube
         run: |
           curl -s "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=5&playlistId=PLJkDlUAxVFug_IN4Cf_eC6SQfzVNXeAms&key=${{ secrets.YOUTUBE_API_KEY }}" > videos.json
-
       - name: Send to Port
         run: |
           cat videos.json | jq -c '.items[] | {
             identifier: .snippet.resourceId.videoId,
-            video_url: "https://www.youtube.com/watch?v=" + .snippet.resourceId.videoId
+            video_url: "https://www.youtube.com/watch?v=\(.snippet.resourceId.videoId)"
           }' | while read -r video; do
       
             curl -X POST "https://api.getport.io/v1/blueprints/videos/entities?upsert=true" \
