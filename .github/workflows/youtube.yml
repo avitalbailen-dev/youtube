@@ -1,4 +1,4 @@
-name: YouTube to Port (Fixed)
+name: YouTube to Port (Final Working)
 
 on:
   workflow_dispatch:
@@ -7,18 +7,20 @@ jobs:
   ingest:
     runs-on: ubuntu-latest
 
+    env:
+      PORT_API_KEY: ${{ secrets.PORT_API_KEY }}
+      PLAYLIST_ID: your-playlist-id-here
+
     steps:
       - name: Fetch videos from YouTube
         run: |
           curl -s "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=5&playlistId=PLJkDlUAxVFug_IN4Cf_eC6SQfzVNXeAms&key=${{ secrets.YOUTUBE_API_KEY }}" > videos.json
 
-      - name: Validate JSON
+      - name: Validate response
         run: |
           jq . videos.json
 
       - name: Send to Port
-        env:
-          PORT_API_KEY: ${{ secrets.PORT_API_KEY }}
         run: |
           set -e
 
@@ -26,10 +28,13 @@ jobs:
             identifier: .snippet.resourceId.videoId,
             properties: {
               video_url: "https://www.youtube.com/watch?v=\(.snippet.resourceId.videoId)"
+            },
+            relations: {
+              belongs_to_playlist: env.PLAYLIST_ID
             }
           }' videos.json | while IFS= read -r video; do
 
-            echo "Sending: $video"
+            echo "Sending entity: $video"
 
             curl -s -X POST \
               "https://api.getport.io/v1/blueprints/videos/entities?upsert=true" \
