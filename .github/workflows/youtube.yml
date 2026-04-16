@@ -14,9 +14,11 @@ jobs:
       - name: Send to Port
         run: |
           cat videos.json | jq -c '.items[] | {
-            identifier: .snippet.resourceId.videoId,
-            video_url: "https://www.youtube.com/watch?v=\(.snippet.resourceId.videoId)"
+            identifier: (.snippet.resourceId.videoId // .id),
+            video_url: "https://www.youtube.com/watch?v=\(.snippet.resourceId.videoId // .id)"
           }' | while read -r video; do
+      
+            echo "payload: $video"
       
             curl -X POST "https://api.getport.io/v1/blueprints/videos/entities?upsert=true" \
               -H "Authorization: Bearer ${{ secrets.PORT_API_KEY }}" \
