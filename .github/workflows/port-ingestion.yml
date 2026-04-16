@@ -53,4 +53,8 @@ jobs:
           clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
           operation: BULK_UPSERT
           blueprint: youtube_video
-          entities: ./port_entities.json
+          # Note the use of "path:" to tell the action this is a file
+          entities: |
+            {
+              "entities": ./port_entities.json
+            }
