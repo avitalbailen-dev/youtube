@@ -1,0 +1,17 @@
+access_token=$(curl --location --request POST 'https://api.port.io/v1/auth/access_token' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "clientId": "CLIENT_ID",
+    "clientSecret": "CLIENT_SECRET"
+}' | jq '.accessToken' | sed 's/"//g')
+
+# The token will be available in the access_token variable
+
+blueprint_id='MY_BLUEPRINT'
+entity_id='MY_ENTITY_IDENTIFIER'
+
+curl --location --request GET "https://api.port.io/v1/blueprints/${blueprint_id}/entities/${entity_id}" \
+    --header "Authorization: Bearer $access_token" \
+    --header "Content-Type: application/json"
+
+# The output of the command contains the content of the resulting entity
