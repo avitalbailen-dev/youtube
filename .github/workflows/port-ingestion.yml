@@ -1,30 +1,35 @@
 name: Ingest YouTube Catalog
 on:
-  workflow_dispatch: # Allows manual run for testing
-  schedule:
-    - cron: '0 0 * * *' # Runs every day at midnight
+  workflow_dispatch: # Allows you to run this manually from the Actions tab
 
 jobs:
   sync-youtube-to-port:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch YouTube Data
-        id: youtube_data
+        id: fetch_youtube
         run: |
-          # 1. Call YouTube API
-          # We fetch the snippet (title, description) and contentDetails
+          # 1. Call YouTube API and save to file
+          # Replace YOUR_PLAYLIST_ID with your actual ID (e.g., PL... or UU...)
           curl -G "https://www.googleapis.com/youtube/v3/playlistItems" \
             --data-urlencode "part=snippet,contentDetails" \
             --data-urlencode "maxResults=50" \
-            --data-urlencode "playlistId=PLfC-pOKASxcfHzNw8LHVYNlubvL75Dryr" \
+            --data-urlencode "playlistId=YOUR_PLAYLIST_ID" \
             --data-urlencode "key=${{ secrets.YOUTUBE_API_KEY }}" > youtube_response.json
+
+          # 2. Check if the API returned an error (e.g., invalid key or private playlist)
+          if grep -q "error" youtube_response.json; then
+            echo "❌ YouTube API Error detected:"
+            cat youtube_response.json
+            exit 1
+          fi
 
       - name: Transform Data for Port
         id: transform
         run: |
-          # 2. Use jq to map YouTube fields to Port Blueprint properties
-          # This creates a JSON array of Port Entities
-          cat youtube_response.json | jq '[.items[] | {
+          # 3. Transform YouTube JSON into Port Entity format
+          # We use --arg to safely pass the Playlist ID into the mapping
+          cat youtube_response.json | jq --arg PLAYLIST_ID "YOUR_PLAYLIST_ID" '[.items[] | {
             "identifier": .contentDetails.videoId,
             "title": .snippet.title,
             "properties": {
@@ -33,9 +38,13 @@ jobs:
               "thumbnail": .snippet.thumbnails.high.url
             },
             "relations": {
-              "playlist": "YOUR_PLAYLIST_ID"
+              "playlist": $PLAYLIST_ID
             }
           }]' > port_entities.json
+
+          # 4. Debug: Print the result so you can verify it in the GitHub Logs
+          echo "✅ Successfully transformed data. Preview:"
+          head -n 15 port_entities.json
 
       - name: Upsert to Port
         uses: port-labs/port-github-action@v1
