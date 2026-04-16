@@ -1,0 +1,47 @@
+name: Ingest YouTube Catalog
+on:
+  workflow_dispatch: # Allows manual run for testing
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight
+
+jobs:
+  sync-youtube-to-port:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch YouTube Data
+        id: youtube_data
+        run: |
+          # 1. Call YouTube API
+          # We fetch the snippet (title, description) and contentDetails
+          curl -G "https://www.googleapis.com/youtube/v3/playlistItems" \
+            --data-urlencode "part=snippet,contentDetails" \
+            --data-urlencode "maxResults=50" \
+            --data-urlencode "playlistId=PLfC-pOKASxcfHzNw8LHVYNlubvL75Dryr" \
+            --data-urlencode "key=${{ secrets.YOUTUBE_API_KEY }}" > youtube_response.json
+
+      - name: Transform Data for Port
+        id: transform
+        run: |
+          # 2. Use jq to map YouTube fields to Port Blueprint properties
+          # This creates a JSON array of Port Entities
+          cat youtube_response.json | jq '[.items[] | {
+            "identifier": .contentDetails.videoId,
+            "title": .snippet.title,
+            "properties": {
+              "link": ("https://www.youtube.com/watch?v=" + .contentDetails.videoId),
+              "publishedAt": .snippet.publishedAt,
+              "thumbnail": .snippet.thumbnails.high.url
+            },
+            "relations": {
+              "playlist": "YOUR_PLAYLIST_ID"
+            }
+          }]' > port_entities.json
+
+      - name: Upsert to Port
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          operation: BULK_UPSERT
+          blueprint: youtube_video
+          entities: ./port_entities.json
