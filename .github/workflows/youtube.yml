@@ -1,0 +1,27 @@
+name: YouTube to Port (Simple)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch videos from YouTube
+        run: |
+          curl -s "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=5&playlistId=PLJkDlUAxVFug_IN4Cf_eC6SQfzVNXeAms&key=${{ secrets.YOUTUBE_API_KEY }}" > videos.json
+
+      - name: Send to Port
+        run: |
+          cat videos.json | jq -c '.items[] | {
+            identifier: .snippet.resourceId.videoId,
+            properties: {
+              title: .snippet.title
+            }
+          }' | while read video; do
+            curl -X POST "https://api.getport.io/v1/blueprints/video/entities?upsert=true" \
+              -H "Authorization: Bearer ${{ secrets.PORT_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d "$video"
+          done
