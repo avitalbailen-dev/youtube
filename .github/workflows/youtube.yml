@@ -1,4 +1,4 @@
-name: YouTube to Port (Simple)
+name: YouTube to Port (Stable)
 
 on:
   workflow_dispatch:
@@ -11,18 +11,20 @@ jobs:
       - name: Fetch videos from YouTube
         run: |
           curl -s "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=5&playlistId=PLJkDlUAxVFug_IN4Cf_eC6SQfzVNXeAms&key=${{ secrets.YOUTUBE_API_KEY }}" > videos.json
+
+      - name: Install jq (just in case)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Send to Port
+        env:
+          PORT_API_KEY: ${{ secrets.PORT_API_KEY }}
         run: |
-          cat videos.json | jq -c '.items[] | {
-            identifier: (.snippet.resourceId.videoId // .id),
-            video_url: "https://www.youtube.com/watch?v=\(.snippet.resourceId.videoId // .id)"
-          }' | while read -r video; do
-      
-            echo "payload: $video"
-      
-            curl -X POST "https://api.getport.io/v1/blueprints/videos/entities?upsert=true" \
-              -H "Authorization: Bearer ${{ secrets.PORT_API_KEY }}" \
+          jq -c '.items[] | {
+            identifier: .snippet.resourceId.videoId,
+            video_url: "https://www.youtube.com/watch?v=\(.snippet.resourceId.videoId)"
+          }' videos.json \
+          | xargs -I{} curl -s -X POST \
+              "https://api.getport.io/v1/blueprints/videos/entities?upsert=true" \
+              -H "Authorization: Bearer $PORT_API_KEY" \
               -H "Content-Type: application/json" \
-              -d "$video"
-      
-          done
+              --data-binary '{}'
